@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+
+/* ── TOKEN SYSTEM ── */
+:root{
+  --bg:#2a2022;--surface:#3a2d2e;--border:#8a7060;--accent:#4C76A0;
+  --text:#f5e8d0;--text-dim:#E3CFAE;--text-mute:#c9b897;
+  --hint-fill:#4C76A077;--hint-bdr:#4C76A0bb;--overlay:#00000099;
+  --board-bg:#2a2022;--board-pad:8px;
+  --cell-a:#E3CFAE;--cell-b:#4B4142;--cell-hover:#c9b897;--cell-radius:0px;
+  --d1:#4C76A0;--d1-ring:#E3CFAE;--d2:#CF4C40;--d2-ring:#FBB26A;
+}
+.t-chess{--bg:#2a2022;--surface:#3a2d2e;--border:#8a7060;--accent:#4C76A0;--text:#f5e8d0;--text-dim:#E3CFAE;--text-mute:#c9b897;--hint-fill:#4C76A077;--hint-bdr:#4C76A0bb;--board-bg:#2a2022;--cell-a:#E3CFAE;--cell-b:#4B4142;--cell-hover:#c9b897;--cell-radius:0px;--d1:#4C76A0;--d1-ring:#E3CFAE;--d2:#CF4C40;--d2-ring:#FBB26A;}
+.t-minimal{--bg:#e8e0d8;--surface:#d8d0c8;--border:#5a504a;--accent:#6B9E8F;--text:#3a3030;--text-dim:#4a4040;--text-mute:#6a5a50;--hint-fill:#6B9E8F55;--hint-bdr:#6B9E8F99;--board-bg:#F5F0EB;--cell-a:#F5F0EB;--cell-b:#e0d8d0;--cell-hover:#ddd5cc;--cell-radius:0px;--d1:#5a5060;--d1-ring:transparent;--d2:#6B9E8F;--d2-ring:transparent;}
+.t-slate{--bg:#3a3a3a;--surface:#4a4a4a;--border:#666;--accent:#D4B8A8;--text:#f0ece8;--text-dim:#e0d8d0;--text-mute:#c0b8b0;--hint-fill:#D4B8A855;--hint-bdr:#D4B8A899;--board-bg:#555;--cell-a:#777;--cell-b:#555;--cell-hover:#888;--cell-radius:0px;--d1:#1a1a1a;--d1-ring:transparent;--d2:#D4B8A8;--d2-ring:transparent;}
+
+body{background:var(--bg);color:var(--text);font-family:'Georgia',serif;min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:14px 10px 32px;user-select:none;transition:background .25s,color .25s;}
+
+h1{font-size:1.6rem;letter-spacing:.22em;color:var(--text-dim);text-transform:uppercase;margin-bottom:2px;}
+.tagline{font-size:.65rem;color:var(--text-mute);letter-spacing:.15em;text-transform:uppercase;margin-bottom:12px;}
+
+/* ── TOP ROW: theme + toggles ── */
+.top-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:center;margin-bottom:10px;}
+.top-label{font-size:.6rem;color:var(--text-mute);letter-spacing:.08em;text-transform:uppercase;}
+
+.th-btn{padding:5px 13px;border-radius:16px;font-size:.62rem;letter-spacing:.07em;text-transform:uppercase;cursor:pointer;border:1px solid var(--border);background:var(--surface);color:var(--text-mute);font-family:inherit;transition:all .15s;}
+.th-btn.active{background:var(--accent);border-color:var(--accent);color:#fff;}
+
+.toggle-wrap{display:flex;align-items:center;gap:5px;background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:5px 10px;cursor:pointer;}
+.toggle-label{font-size:.62rem;letter-spacing:.07em;color:var(--text-mute);text-transform:uppercase;}
+.toggle-track{width:26px;height:13px;background:var(--border);border-radius:10px;position:relative;transition:background .2s;flex-shrink:0;}
+.toggle-track.on{background:var(--accent);}
+.toggle-thumb{width:9px;height:9px;background:#fff;border-radius:50%;position:absolute;top:2px;left:2px;transition:left .2s;}
+.toggle-track.on .toggle-thumb{left:15px;}
+
+/* ── CUSTOM PANEL ── */
+.custom-panel{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 16px;margin-bottom:10px;width:100%;max-width:400px;display:none;}
+.custom-panel.open{display:block;}
+.custom-panel h3{font-size:.68rem;text-transform:uppercase;letter-spacing:.1em;color:var(--text-dim);margin-bottom:10px;}
+.custom-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.custom-item{display:flex;flex-direction:column;gap:4px;}
+.custom-item label{font-size:.58rem;color:var(--text-mute);text-transform:uppercase;letter-spacing:.07em;}
+.custom-item input[type=color]{width:100%;height:28px;border:1px solid var(--border);border-radius:6px;cursor:pointer;background:none;padding:2px;}
+
+/* ── MODE ── */
+.mode-row{display:flex;gap:7px;margin-bottom:10px;flex-wrap:wrap;justify-content:center;}
+.mode-btn{padding:6px 15px;background:var(--surface);color:var(--text-mute);border:1px solid var(--border);border-radius:20px;font-size:.7rem;letter-spacing:.08em;text-transform:uppercase;cursor:pointer;font-family:inherit;transition:all .15s;}
+.mode-btn.active{background:var(--accent);border-color:var(--accent);color:#fff;}
+
+/* ── SCOREBAR ── */
+.scorebar{display:flex;gap:14px;align-items:center;margin-bottom:8px;}
+.score-box{display:flex;flex-direction:column;align-items:center;background:var(--surface);border:1.5px solid var(--border);border-radius:8px;padding:7px 18px;min-width:76px;transition:border-color .2s,box-shadow .2s;}
+.score-box.active{border-color:var(--accent);box-shadow:0 0 10px var(--hint-fill);}
+.score-disc{width:20px;height:20px;border-radius:50%;margin-bottom:4px;background:var(--d1);}
+.score-disc.d2{background:var(--d2);}
+.score-num{font-size:1.4rem;font-weight:bold;color:var(--text-dim);}
+.score-lbl{font-size:.55rem;color:var(--text-mute);letter-spacing:.08em;text-transform:uppercase;}
+.turn-info{font-size:.7rem;letter-spacing:.1em;color:var(--text-dim);margin-bottom:10px;min-height:1.1em;text-align:center;}
+.ai-thinking{font-size:.62rem;color:var(--accent);letter-spacing:.08em;text-transform:uppercase;min-height:14px;text-align:center;margin-bottom:6px;}
+
+/* ── BOARD ── */
+.board-wrap{background:var(--board-bg);border:3px solid var(--border);border-radius:10px;padding:var(--board-pad);box-shadow:0 0 28px #00000066;margin-bottom:12px;transition:border-color .25s,background .25s;}
+.board{display:grid;grid-template-columns:repeat(8,1fr);gap:3px;}
+.cell{
+  width:calc((min(90vw,400px) - 22px - 21px)/8);
+  height:calc((min(90vw,400px) - 22px - 21px)/8);
+  background:var(--cell-a);border-radius:var(--cell-radius);
+  display:flex;align-items:center;justify-content:center;
+  cursor:pointer;position:relative;transition:background .12s;
+}
+.cell.cb{background:var(--cell-b);}
+.cell.hint{background:var(--cell-hover);}
+.cell.hint::after{content:'';width:32%;height:32%;border-radius:50%;background:var(--hint-fill);border:2px solid var(--hint-bdr);position:absolute;}
+.disc{width:78%;height:78%;border-radius:50%;position:absolute;transition:transform .12s;box-shadow:2px 2px 5px #00000055;}
+.disc.d1{background:var(--d1);box-shadow:2px 2px 5px #00000066,0 0 0 2.5px var(--d1-ring);}
+.disc.d2{background:var(--d2);box-shadow:2px 2px 5px #00000055,0 0 0 2.5px var(--d2-ring);}
+
+/* ── CONTROLS ── */
+.btn-row{display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;justify-content:center;}
+.btn{padding:8px 20px;background:var(--surface);color:var(--text-mute);border:1px solid var(--border);border-radius:20px;font-size:.7rem;letter-spacing:.08em;text-transform:uppercase;cursor:pointer;font-family:inherit;transition:all .15s;}
+.btn:hover,.btn:active{background:var(--border);color:var(--text);}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff;}
+
+/* ── GUIDE ── */
+#guide-box{max-width:400px;width:100%;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:11px 14px;margin-bottom:10px;}
+#guide-box h3{font-size:.7rem;font-weight:bold;letter-spacing:.1em;text-transform:uppercase;color:var(--text-dim);margin-bottom:7px;}
+#guide-box ul{list-style:disc;padding-left:16px;font-size:.68rem;color:var(--text-mute);line-height:2;}
+
+/* ── OVERLAY ── */
+.overlay{display:none;position:fixed;inset:0;background:var(--overlay);align-items:center;justify-content:center;z-index:99;}
+.overlay.show{display:flex;}
+.overlay-box{background:var(--surface);border:2px solid var(--accent);border-radius:14px;padding:30px 40px;text-align:center;box-shadow:0 0 40px #00000088;display:flex;flex-direction:column;gap:12px;}
+.overlay-title{font-size:1.4rem;color:var(--text-dim);letter-spacing:.15em;}
+.overlay-score{font-size:.9rem;color:var(--text-mute);}
+</style>
+</head>
+<body class="t-chess">
+
+<h1>Othello</h1>
+<p class="tagline">Reversi · Classic Board Game</p>
+
+<!-- THEME + TOGGLES -->
+<div class="top-row">
+  <span class="top-label">Theme:</span>
+  <button class="th-btn active" onclick="setTheme('chess',this)">Chess</button>
+  <button class="th-btn" onclick="setTheme('minimal',this)">Minimal</button>
+  <button class="th-btn" onclick="setTheme('slate',this)">Slate</button>
+  <button class="th-btn" id="th-custom" onclick="toggleCustom(this)">🎨 Custom</button>
+  <div class="toggle-wrap" onclick="toggleHints()">
+    <span class="toggle-label">Hints</span>
+    <div class="toggle-track on" id="hintTrack"><div class="toggle-thumb"></div></div>
+  </div>
+  <div class="toggle-wrap" onclick="toggleGuide()">
+    <span class="toggle-label">Guide</span>
+    <div class="toggle-track on" id="guideTrack"><div class="toggle-thumb"></div></div>
+  </div>
+</div>
+
+<!-- CUSTOM PANEL -->
+<div class="custom-panel" id="customPanel">
+  <h3>Customize</h3>
+  <div class="custom-grid">
+    <div class="custom-item"><label>Board Color A</label><input type="color" id="cCellA" value="#E3CFAE" oninput="applyCustom()"></div>
+    <div class="custom-item"><label>Board Color B</label><input type="color" id="cCellB" value="#4B4142" oninput="applyCustom()"></div>
+    <div class="custom-item"><label>Player 1 Disc</label><input type="color" id="cD1" value="#4C76A0" oninput="applyCustom()"></div>
+    <div class="custom-item"><label>Player 2 Disc</label><input type="color" id="cD2" value="#CF4C40" oninput="applyCustom()"></div>
+  </div>
+</div>
+
+<!-- MODE -->
+<div class="mode-row">
+  <button class="mode-btn active" id="m2p" onclick="setMode('human')">👥 2 Players</button>
+  <button class="mode-btn" id="mai" onclick="setMode('ai')">🤖 VS AI</button>
+</div>
+
+<!-- SCORE -->
+<div class="scorebar">
+  <div class="score-box active" id="scoreP1">
+    <div class="score-disc d1"></div>
+    <div class="score-num" id="numP1">2</div>
+    <div class="score-lbl" id="lblP1">Blue</div>
+  </div>
+  <span style="font-size:.8rem;color:var(--text-mute);">vs</span>
+  <div class="score-box" id="scoreP2">
+    <div class="score-disc d2"></div>
+    <div class="score-num" id="numP2">2</div>
+    <div class="score-lbl" id="lblP2">Red</div>
+  </div>
+</div>
+
+<div class="turn-info" id="turnInfo">Blue's Turn</div>
+<div class="ai-thinking" id="aiMsg"></div>
+
+<!-- BOARD -->
+<div class="board-wrap">
+  <div class="board" id="board"></div>
+</div>
+
+<!-- BUTTONS -->
+<div class="btn-row">
+  <button class="btn primary" onclick="newGame()">↺ New Game</button>
+</div>
+
+<!-- GUIDE -->
+<div id="guide-box">
+  <h3>How to Play</h3>
+  <ul>
+    <li>Place a disc to <strong>sandwich</strong> opponent discs between yours</li>
+    <li>All sandwiched discs flip to your color</li>
+    <li>Highlighted cells show your valid moves — you must play there</li>
+    <li>If you have no valid move, your turn is skipped</li>
+    <li>Game ends when the board is full or neither player can move</li>
+    <li>Most discs on the board wins!</li>
+  </ul>
+</div>
+
+<!-- OVERLAY -->
+<div class="overlay" id="overlay">
+  <div class="overlay-box">
+    <div class="overlay-title" id="overlayTitle">Game Over!</div>
+    <div class="overlay-score" id="overlayScore"></div>
+    <button class="btn primary" onclick="newGame();document.getElementById('overlay').classList.remove('show')">Play Again</button>
+  </div>
+</div>
+
+<script>
+const EMPTY=0,P1=1,P2=2;
+const DIRS=[[-1,-1],[-1,0],[-1,1],[0,-1],[0,1],[1,-1],[1,0],[1,1]];
+let board,current,mode='human',showHints=true,showGuide=true,aiThinking=false,curTheme='chess';
+
+const THEME_LABELS={chess:['Blue','Red'],minimal:['Gray','Mint'],slate:['Dark','Cream'],custom:['P1','P2']};
+
+// ── THEME ──
+function setTheme(name,el){
+  curTheme=name;
+  document.body.className='t-'+name;
+  document.querySelectorAll('.th-btn').forEach(b=>b.classList.remove('active'));
+  if(el)el.classList.add('active');
+  document.getElementById('customPanel').classList.remove('open');
+  applyLabels();
+  renderBoard();updateScore();updateTurnText();
+}
+
+function toggleCustom(el){
+  const p=document.getElementById('customPanel');
+  p.classList.toggle('open');
+  if(p.classList.contains('open')){
+    document.querySelectorAll('.th-btn').forEach(b=>b.classList.remove('active'));
+    el.classList.add('active');
+    curTheme='custom';
+    document.body.className='';
+    applyLabels();
+    applyCustom();
+  }
+}
+
+function applyCustom(){
+  const r=document.documentElement;
+  const ca=document.getElementById('cCellA').value;
+  const cb=document.getElementById('cCellB').value;
+  const d1=document.getElementById('cD1').value;
+  const d2=document.getElementById('cD2').value;
+  r.style.setProperty('--cell-a',ca);
+  r.style.setProperty('--cell-b',cb);
+  r.style.setProperty('--cell-hover',lighten(ca));
+  r.style.setProperty('--d1',d1);
+  r.style.setProperty('--d1-ring','transparent');
+  r.style.setProperty('--d2',d2);
+  r.style.setProperty('--d2-ring','transparent');
+  r.style.setProperty('--hint-fill',d1+'55');
+  r.style.setProperty('--hint-bdr',d1+'99');
+  renderBoard();updateScore();
+}
+
+function lighten(hex){
+  const n=parseInt(hex.slice(1),16);
+  const r=Math.min(255,((n>>16)&255)+20);
+  const g=Math.min(255,((n>>8)&255)+20);
+  const b=Math.min(255,(n&255)+20);
+  return `#${r.toString(16).padStart(2,'0')}${g.toString(16).padStart(2,'0')}${b.toString(16).padStart(2,'0')}`;
+}
+
+function applyLabels(){
+  const[l1,l2]=THEME_LABELS[curTheme]||['P1','P2'];
+  document.getElementById('lblP1').textContent=l1;
+  document.getElementById('lblP2').textContent=l2;
+}
+
+function lbl(p){
+  const[l1,l2]=THEME_LABELS[curTheme]||['P1','P2'];
+  return p===P1?l1:l2;
+}
+
+// ── GAME LOGIC ──
+function init(){
+  board=Array.from({length:8},()=>new Array(8).fill(EMPTY));
+  board[3][3]=P2;board[3][4]=P1;board[4][3]=P1;board[4][4]=P2;
+  current=P1;aiThinking=false;
+}
+
+function getFlips(b,r,c,player){
+  const opp=player===P1?P2:P1;
+  let flips=[];
+  for(const[dr,dc]of DIRS){
+    let path=[],nr=r+dr,nc=c+dc;
+    while(nr>=0&&nr<8&&nc>=0&&nc<8&&b[nr][nc]===opp){path.push([nr,nc]);nr+=dr;nc+=dc;}
+    if(path.length&&nr>=0&&nr<8&&nc>=0&&nc<8&&b[nr][nc]===player)flips.push(...path);
+  }
+  return flips;
+}
+
+function validMoves(b,player){
+  const m=[];
+  for(let r=0;r<8;r++)for(let c=0;c<8;c++)
+    if(b[r][c]===EMPTY&&getFlips(b,r,c,player).length)m.push([r,c]);
+  return m;
+}
+
+function applyMove(b,r,c,player){
+  const nb=b.map(row=>[...row]);
+  getFlips(nb,r,c,player).forEach(([fr,fc])=>nb[fr][fc]=player);
+  nb[r][c]=player;return nb;
+}
+
+// ── RENDER ──
+function renderBoard(){
+  const el=document.getElementById('board');
+  const moves=showHints?validMoves(board,current).map(([r,c])=>`${r},${c}`):[];
+  el.innerHTML='';
+  for(let r=0;r<8;r++)for(let c=0;c<8;c++){
+    const cell=document.createElement('div');
+    const isB=(r+c)%2===1;
+    cell.className='cell'+(isB?' cb':'');
+    if(board[r][c]!==EMPTY){
+      const d=document.createElement('div');
+      d.className='disc '+(board[r][c]===P1?'d1':'d2');
+      cell.appendChild(d);
+    } else if(moves.includes(`${r},${c}`)){
+      cell.classList.add('hint');
+    }
+    const fr=r,fc=c;
+    cell.onclick=()=>handleClick(fr,fc);
+    el.appendChild(cell);
+  }
+}
+
+function updateScore(){
+  let p1=0,p2=0;
+  board.forEach(row=>row.forEach(v=>{if(v===P1)p1++;if(v===P2)p2++;}));
+  document.getElementById('numP1').textContent=p1;
+  document.getElementById('numP2').textContent=p2;
+  document.getElementById('scoreP1').classList.toggle('active',current===P1);
+  document.getElementById('scoreP2').classList.toggle('active',current===P2);
+  return{p1,p2};
+}
+
+function updateTurnText(){
+  document.getElementById('turnInfo').textContent=`${lbl(current)}'s Turn`;
+}
+
+function updateTurn(){
+  const moves=validMoves(board,current);
+  if(!moves.length){
+    const opp=current===P1?P2:P1;
+    if(!validMoves(board,opp).length){gameOver();return;}
+    current=opp;
+    document.getElementById('turnInfo').textContent=`Opponent skipped — ${lbl(current)}'s Turn`;
+    renderBoard();updateScore();
+    if(mode==='ai'&&current===P2&&!aiThinking){aiThinking=true;setTimeout(doAiMove,700);}
+    return;
+  }
+  updateTurnText();
+  renderBoard();updateScore();
+  if(mode==='ai'&&current===P2&&!aiThinking){aiThinking=true;setTimeout(doAiMove,600);}
+}
+
+function handleClick(r,c){
+  if(aiThinking||(mode==='ai'&&current===P2))return;
+  const flips=getFlips(board,r,c,current);
+  if(!flips.length)return;
+  board=applyMove(board,r,c,current);
+  current=current===P1?P2:P1;
+  updateTurn();
+}
+
+// ── AI (minimax depth 5) ──
+function scoreB(b,player){
+  const opp=player===P1?P2:P1;
+  let s=0;
+  const corner=[[0,0],[0,7],[7,0],[7,7]];
+  b.forEach((row,r)=>row.forEach((v,c)=>{
+    if(v===EMPTY)return;
+    const mine=v===player;
+    let val=1;
+    if(corner.some(([cr,cc])=>cr===r&&cc===c))val=10;
+    s+=mine?val:-val;
+  }));
+  s+=validMoves(b,player).length*2-validMoves(b,opp).length*2;
+  return s;
+}
+
+function minimax(b,depth,alpha,beta,maximizing,aiP){
+  const player=maximizing?aiP:(aiP===P1?P2:P1);
+  const moves=validMoves(b,player);
+  if(!depth||!moves.length)return scoreB(b,aiP);
+  if(maximizing){
+    let best=-Infinity;
+    for(const[r,c]of moves){
+      const nb=applyMove(b,r,c,player);
+      best=Math.max(best,minimax(nb,depth-1,alpha,beta,false,aiP));
+      alpha=Math.max(alpha,best);if(beta<=alpha)break;
+    }
+    return best;
+  }else{
+    let best=Infinity;
+    for(const[r,c]of moves){
+      const nb=applyMove(b,r,c,player);
+      best=Math.min(best,minimax(nb,depth-1,alpha,beta,true,aiP));
+      beta=Math.min(beta,best);if(beta<=alpha)break;
+    }
+    return best;
+  }
+}
+
+function doAiMove(){
+  document.getElementById('aiMsg').textContent='⚙ AI thinking...';
+  setTimeout(()=>{
+    const moves=validMoves(board,P2);
+    if(!moves.length){aiThinking=false;document.getElementById('aiMsg').textContent='';updateTurn();return;}
+    let best=null,bestScore=-Infinity;
+    for(const[r,c]of moves){
+      const nb=applyMove(board,r,c,P2);
+      const score=minimax(nb,5,-Infinity,Infinity,false,P2);
+      if(score>bestScore){bestScore=score;best=[r,c];}
+    }
+    if(best){board=applyMove(board,best[0],best[1],P2);current=P1;}
+    aiThinking=false;
+    document.getElementById('aiMsg').textContent='';
+    updateTurn();
+  },50);
+}
+
+function gameOver(){
+  const{p1,p2}=updateScore();
+  document.getElementById('overlay').classList.add('show');
+  const winner=p1>p2?lbl(P1):p2>p1?lbl(P2):'Nobody';
+  document.getElementById('overlayTitle').textContent=p1===p2?`🤝 It's a Draw!`:`${winner} Wins! 🎉`;
+  document.getElementById('overlayScore').textContent=`${lbl(P1)} ${p1} — ${lbl(P2)} ${p2}`;
+}
+
+// ── CONTROLS ──
+function setMode(m){
+  mode=m;
+  document.getElementById('m2p').classList.toggle('active',m==='human');
+  document.getElementById('mai').classList.toggle('active',m==='ai');
+  newGame();
+}
+
+function toggleHints(){
+  showHints=!showHints;
+  document.getElementById('hintTrack').classList.toggle('on',showHints);
+  renderBoard();
+}
+
+function toggleGuide(){
+  showGuide=!showGuide;
+  document.getElementById('guideTrack').classList.toggle('on',showGuide);
+  document.getElementById('guide-box').style.display=showGuide?'block':'none';
+}
+
+function newGame(){
+  document.getElementById('overlay').classList.remove('show');
+  document.getElementById('aiMsg').textContent='';
+  init();applyLabels();renderBoard();updateScore();updateTurnText();
+}
+
+newGame();
+</script>
+</body>
+</html>
